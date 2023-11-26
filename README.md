@@ -1,5 +1,7 @@
 # FLO CLTV Tahmini -> BG-NBD ve GAMMA-GAMMA
 
+![flo magaza](https://s3-eu-west-1.amazonaws.com/atlaspark/images/store_facade_image/SyvdQeYFQ-small.jpeg?1539869812527)
+
 * ## İş Problemi
 
 FLO satış ve pazarlama faaliyetleri için roadmap belirlemek istemektedir. Şirketin orta uzun vadeli plan yapabilmesi için var olan müşterilerin gelecekte şirkete sağlayacakları potansiyel değerin **tahmin** edilmesi gerekmektedir.
