@@ -1,3 +1,5 @@
+
+
 import pandas as pd
 import datetime as dt
 import  seaborn as sns
@@ -13,20 +15,13 @@ pd.set_option("display.width", 1000)
 pd.set_option("display.float_format", lambda x: '%.0f' % x)
 
 
-####### Görev 1:  Veriyi Anlama ve Hazırlama
-
-## Adım 1:   flo_data_20K.csv verisini okuyunuz.
+# 1:  Veriyi Anlama ve Hazırlama
 
 df_ = pd.read_csv("CRM/Miuul/FLOCLTVPrediction/flo_data_20k.csv")
 df = df_.copy()
 
 df.head(100)
-#########################################################################################################################
 
-##  Adım2: Aykırı değerleri baskılamak için gerekli olan outlier_thresholds ve replace_with_thresholds fonksiyonlarını tanımlayınız.
-#          Not: cltv hesaplanırken frequency değerleri integer olması gerekmektedir. Bu nedenle alt ve üst limitlerini round() ile yuvarlayınız.
-
-#aykırı değerler için alt ve üst limitlerin belirlenmesi
 def outlier_thresholds (dataframe, variable):
     quartile1 =dataframe[variable].quantile(0.01)
     quartile3 = dataframe[variable].quantile(0.99)
@@ -43,37 +38,13 @@ def replace_with_thresholds(dataframe, variable):
     dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
     return low_limit, up_limit
 
-########################################################################################################################
-
-##  Adım3: "order_num_total_ever_online", "order_num_total_ever_offline", "customer_value_total_ever_offline", "customer_value_total_ever_online"
-#          değişkenlerinin aykırı değerleri varsa baskılayanız.
-
-#order_num_total_ever_online
-#order_num_total_ever_offline
-#customer_value_total_ever_offline
-#customer_value_total_ever_online
-df.head()
-outlier_thresholds(df, "order_num_total_ever_online")
-replace_with_thresholds(df, "order_num_total_ever_online")
-replace_with_thresholds(df, "order_num_total_ever_offline")
-replace_with_thresholds(df, "customer_value_total_ever_offline")
-replace_with_thresholds(df, "customer_value_total_ever_online")
-
-df.describe().T
-
-########################################################################################################################
-
-## Adım 4: Omnichannel müşterilerin hem online'dan hem de offline platformlardan alışveriş yaptığını ifade etmektedir.
-#  Her bir müşterinin toplam alışveriş sayısı ve harcaması için yeni değişkenler oluşturunuz
 
 df["total_order"] = df["order_num_total_ever_online"] + df["order_num_total_ever_offline"]
 df["total_value"] = df["customer_value_total_ever_offline"] + df["customer_value_total_ever_online"]
 
 df.head()
 
-#######################################################################################################################
-
-## Adım 5: Değişken tiplerini inceleyiniz. Tarih ifade eden değişkenlerin tipini date'e çeviriniz
+# Değişken tiplerini inceleyiniz. Tarih ifade eden değişkenlerin tipini date'e çeviriniz
 
 df.info()
 
@@ -83,20 +54,14 @@ df[date_col] = df[date_col].apply(pd.to_datetime)
 
 df.info()
 df.head()
-#######################################################################################################################
 
-########## Görev 2: CLTV Veri Yapısının Oluşturulması
+# 2: CLTV Veri Yapısının Oluşturulması
 
-## Adım 1: Veri setindeki en son alışverişin yapıldığı tarihten 2 gün sonrasını analiz tarihi olarak alınız.
 
 df["last_order_date"].max()
 
 today_date = dt.datetime(2021, 6, 2)
 
-#######################################################################################################################
-
-## Adım 2: customer_id, recency_cltv_weekly, T_weekly, frequency ve monetary_cltv_avg değerlerinin yer aldığı yeni bir cltv dataframe'i
-# oluşturunuz. Monetary değeri satın alma başına ortalama değer olarak, recency ve tenure değerleri ise haftalık cinsten ifade edilecek.
 
 cltv_df = df[["master_id", "last_order_date", "first_order_date", "total_order", "total_value"]]
 
@@ -116,13 +81,9 @@ cltv_df["monetary_cltv_avg"] = cltv_df["total_value"] / cltv_df["total_order"]
 
 cltv_df.head()
 
-########################################################################################################################
 
-########## Görev 3: BG/NBD, Gamma-Gamma Modellerinin Kurulması ve CLTV’nin Hesaplanması
+# BG/NBD, Gamma-Gamma Modellerinin Kurulması ve CLTV’nin Hesaplanması
 
-## Adım 1: BG/NBD modelini fit ediniz.
-    #3 ay içerisinde müşterilerden beklenen satın almaları tahmin ediniz ve exp_sales_3_month olarak cltv dataframe'ine ekleyiniz.
-    # 6 ay içerisinde müşterilerden beklenen satın almaları tahmin ediniz ve exp_sales_6_month olarak cltv dataframe'ine ekleyiniz.
 
 bgf = BetaGeoFitter(penalizer_coef=0.001)
 bgf.fit(cltv_df["frequency"], cltv_df["recency"], cltv_df["T"])
@@ -143,10 +104,7 @@ cltv_df["expected_purh_6_month"]= bgf.predict(24,
                                             )
 cltv_df.sort_values("expected_purh_6_month", ascending=False)
 
-########################################################################################################################
 
-## Adım 2: Gamma-Gamma modelini fit ediniz. Müşterilerin ortalama bırakacakları değeri tahminleyip exp_average_value olarak cltv
-   #dataframe'ine ekleyiniz.
 
 ggf = GammaGammaFitter(penalizer_coef=0.01)
 
@@ -156,12 +114,6 @@ cltv_df["expected_average_profit"]=ggf.conditional_expected_average_profit(cltv_
 
 cltv_df.head()
 cltv_df= cltv_df.drop("master_id", axis=1)
-
-########################################################################################################################
-
-
-## Adım 3: 6 aylık CLTV hesaplayınız ve cltv ismiyle dataframe'e ekleyiniz.
-    # Cltv değeri en yüksek 20 kişiyi gözlemleyiniz.
 
 cltv = ggf.customer_lifetime_value(bgf,
                                    cltv_df["frequency"],
@@ -179,9 +131,6 @@ cltv = cltv.reset_index()
 
 cltv.sort_values("clv", ascending=False).head(20)
 
-########################################################################################################################
-
-##Adım 1: 6 aylık CLTV'ye göre tüm müşterilerinizi 4 gruba (segmente) ayırınız ve grup isimlerini veri setine ekleyiniz.
 
 cltv_final = cltv_df.merge(cltv, on="master_id", how="left")
 
